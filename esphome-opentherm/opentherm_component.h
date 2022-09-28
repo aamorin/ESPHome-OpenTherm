@@ -11,7 +11,7 @@ int inPin = D2;
 int outPin = D1;
 OpenTherm ot(inPin, outPin, false);
 
-ICACHE_RAM_ATTR void handleInterrupt() {
+IRAM_ATTR void handleInterrupt() {
 	ot.handleInterrupt();
 }
 
@@ -27,6 +27,7 @@ public:
   Sensor *pressure_sensor = new Sensor();
   Sensor *modulation_sensor = new Sensor();
   Sensor *heating_target_temperature_sensor = new Sensor();
+  Sensor *pump_operation_hours_sensor = new Sensor();
   OpenthermClimate *hotWaterClimate = new OpenthermClimate();
   OpenthermClimate *heatingWaterClimate = new OpenthermClimate();
   BinarySensor *flame = new OpenthermBinarySensor();
@@ -90,6 +91,11 @@ public:
     return ot.isValidResponse(response) ? ot.getFloat(response) : -1;
   }
 
+  float getPumpOperationHours() {
+    unsigned long response = ot.sendRequest(ot.buildRequest(OpenThermRequestType::READ, OpenThermMessageID::CHPumpOperationHours, 0));
+    return ot.isValidResponse(response) ? ot.getFloat(response) : -1;
+  }
+
   void update() override {
 
     ESP_LOGD("opentherm_component", "update heatingWaterClimate: %i", heatingWaterClimate->mode);
@@ -140,6 +146,7 @@ public:
     float ext_temperature = getExternalTemperature();
     float pressure = getPressure();
     float modulation = getModulation();
+    float pump_operation_hours = getPumpOperationHours();
 
     // Publish sensor values
     flame->publish_state(isFlameOn); 
@@ -147,6 +154,7 @@ public:
     return_temperature_sensor->publish_state(return_temperature);
     boiler_temperature->publish_state(boilerTemperature);
     pressure_sensor->publish_state(pressure);
+    pump_operation_hours_sensor->publish_state(pump_operation_hours);
     modulation_sensor->publish_state(modulation);
     
     heating_target_temperature_sensor->publish_state(heating_target_temperature);
